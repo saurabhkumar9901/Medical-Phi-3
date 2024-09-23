@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Prompt Interface</title>
+</head>
+<body>
+    <h1>Submit a Prompt</h1>
+    <form action="/submit_prompt" method="POST">
+        <label for="prompt">Enter your prompt:</label><br><br>
+        <textarea name="prompt" id="prompt" rows="4" cols="50" required></textarea><br><br>
+        <input type="submit" value="Generate">
+    </form>
+
+    {% if result %}
+    <h2>Generated Text:</h2>
+    <p>{{ result }}</p>
+    {% endif %}
+</body>
+</html>
