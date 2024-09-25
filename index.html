@@ -3,75 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LLM Prompt Interface</title>
+    <title>LLM Chatbox Interface</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,200;0,300;0,400;0,600;0,700;0,900;1,200;1,300;1,400;1,600;1,700&display=swap" rel="stylesheet">
     <style>
-        /* Add your custom styles here */
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .chat-container {
+            width: 400px;
+            max-width: 100%;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 15px 20px rgb(30 208 149 / 36%);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+        }
+
+        .chat-header {
+            background-color: #4cafa8;
+            padding: 15px;
+            color: white;
+            font-size: 1.2em;
+            text-align: center;
+            font-family: "Titillium Web", sans-serif;
+            font-weight: 400;
+            font-style: normal;
+        }
+
+        .chat-body {
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
             background-color: #f5f5f5;
         }
-        
-        h1 {
-            color: #333;
+
+        .message {
+            margin-bottom: 15px;
         }
 
-        label {
-            font-size: 1.2em;
-            color: #555;
+        .message.user {
+            text-align: right;
         }
 
-        textarea {
-            width: 100%;
-            padding: 10px;
-            font-size: 1em;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            margin-bottom: 20px;
+        .message .bubble {
+            display: inline-block;
+            padding: 10px 15px;
+            border-radius: 20px;
+            background-color: #ddd;
+            max-width: 70%;
         }
 
-        input[type="submit"] {
-            background-color: #4CAF50;
+        .message.user .bubble {
+            background-color: #4cafa8;
             color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
         }
 
-        input[type="submit"]:hover {
+        .message.bot .bubble {
+            background-color: #f0f0f0;
+        }
+
+        .chat-footer {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #fff;
+            border-top: 1px solid #ddd;
+        }
+
+        .chat-footer textarea {
+            flex: 1;
+            padding: 10px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            font-size: 1em;
+            resize: none;
+            width: 250px;
+        }
+
+        .chat-footer button {
+            background-color: #4cafa8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin-left: 28px;
+            cursor: pointer;
+            position: absolute;
+            margin-top: 0px;
+        }
+
+        .chat-footer button:hover {
             background-color: #45a049;
         }
 
-        h2 {
-            margin-top: 20px;
-            color: #333;
-        }
-
-        p {
-            background-color: #fff;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            white-space: pre-wrap;  /* Ensures that white spaces and line breaks are respected */
-            word-wrap: break-word;   /* Ensures long words break nicely */
+        /* Processing animation */
+        .processing {
+            display: none;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            color: #666;
         }
     </style>
 </head>
 <body>
-    <h1>Submit a Prompt</h1>
-    <form action="/submit_prompt" method="POST">
-        <label for="prompt">Enter your prompt:</label><br><br>
-        <textarea name="prompt" id="prompt" rows="4" cols="50" required></textarea><br><br>
-        <input type="submit" value="Generate">
-    </form>
 
-    {% if result %}
-    <h2>Generated Text:</h2>
-  
-    <p>{{ result | safe }}</p>
-     <!-- Use safe filter to render HTML tags like <br> -->
-    {% endif %}
+    <div class="chat-container">
+        <div class="chat-header">
+            Doctor.ai
+        </div>
+
+        <div class="chat-body" id="chat-body">
+            <!-- User and bot messages are rendered dynamically using Flask -->
+            {% if result %}
+                {% for message in result %}
+                    <div class="message {{ message.sender }}">
+                        <div class="bubble">{{ message.text|safe }}</div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Processing animation -->
+        <div class="processing" id="processing">
+            Bot is typing...
+        </div>
+
+        <div class="chat-footer">
+            <form id="chat-form">
+                <textarea name="prompt" id="prompt" rows="1" placeholder="Type your message..." required></textarea>
+                <button type="submit">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('chat-form').addEventListener('submit', function(event) {
+            event.preventDefault();  // Prevent form from submitting traditionally
+
+            const userInput = document.getElementById('prompt').value;
+            if (userInput.trim() === '') return;
+
+            // Disable input and button during processing
+            document.getElementById('prompt').disabled = true;
+            document.querySelector('button[type="submit"]').disabled = true;
+
+            // Show the user message in the chat
+            const chatBody = document.getElementById('chat-body');
+            const userMessage = document.createElement('div');
+            userMessage.classList.add('message', 'user');
+            userMessage.innerHTML = `<div class="bubble">${userInput}</div>`;
+            chatBody.appendChild(userMessage);
+            chatBody.scrollTop = chatBody.scrollHeight;
+
+            // Show the processing animation
+            document.getElementById('processing').style.display = 'block';
+
+            // Send the data to the server via AJAX
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/submit_prompt', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    // Parse response from the server
+                    const response = JSON.parse(xhr.responseText);
+
+                    // Hide the processing animation
+                    document.getElementById('processing').style.display = 'none';
+
+                    // Add bot message to the chat
+                    const botMessage = document.createElement('div');
+                    botMessage.classList.add('message', 'bot');
+                    botMessage.innerHTML = `<div class="bubble">${response.bot_message}</div>`;
+                    chatBody.appendChild(botMessage);
+                    chatBody.scrollTop = chatBody.scrollHeight;
+
+                    // Re-enable input and button
+                    document.getElementById('prompt').disabled = false;
+                    document.querySelector('button[type="submit"]').disabled = false;
+
+                    // Clear the user input
+                    document.getElementById('prompt').value = '';
+                }
+            };
+            xhr.send('prompt=' + encodeURIComponent(userInput));
+        });
+    </script>
+
 </body>
 </html>
 
